@@ -1,7 +1,7 @@
 use crate::database::{get_db_couples, save_fingerprint};
 use crate::fingerprint::generate_fingerprint;
 use crate::input::load_mp3;
-use crate::r#match::{find_matches, find_matches_basic};
+use crate::r#match::{find_matches};
 use crate::other::generate_unique_id;
 use crate::spectogram::{extract_peaks, spectogram};
 use std::path::PathBuf;
@@ -35,12 +35,12 @@ async fn main() -> anyhow::Result<()> {
     let addresses: Vec<u32> = fingerprint.keys().copied().collect();
      let db_couples = get_db_couples(&addresses)?;
     // 4. Find matches
-    let matches = find_matches_basic(&fingerprint,db_couples).unwrap();
+    let matches = find_matches(&fingerprint,&db_couples);
 
     // 5. Display results
-    println!("Top matches:");
-    for m in matches.iter().take(3) {
-        println!("Match: {} (score: {:.2})", m.file_path.display(), m.score);
+    println!("Top matches: {}",matches.len());
+    for m in matches.iter() {
+        println!("Match: {} (score: {:.2}) {}", m.file_path.display(), m.score, m.timestamp);
     }
 
     Ok(())

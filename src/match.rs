@@ -11,7 +11,7 @@ pub struct Match {
     pub score: f64,
     pub timestamp: u32,
 }
-pub fn find_matches(
+/*pub fn find_matches(
     sample_fingerprint: &HashMap<u32, Couple>,
     db_couples: HashMap<u32, Vec<(Couple, PathBuf)>>,
 ) -> anyhow::Result<Vec<Match>> {
@@ -72,7 +72,7 @@ pub fn find_matches(
     match_list.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
 
     Ok(match_list)
-}
+}*/
 // Update the analyze_relative_timing function
 fn analyze_relative_timing(matches: &HashMap<u32, Vec<(u32, u32)>>) -> HashMap<u32, f64> {
     let mut scores = HashMap::new();
@@ -100,44 +100,79 @@ fn analyze_relative_timing(matches: &HashMap<u32, Vec<(u32, u32)>>) -> HashMap<u
     scores
 }
 
-pub fn find_matches_basic(sample_fingerprint: &HashMap<u32, Couple> ,    db_couples: HashMap<u32, Vec<(Couple, PathBuf)>>,) -> anyhow::Result<Vec<Match>> {
+use ordered_float::OrderedFloat;
+use std::cmp::Reverse;
+use num_complex::Complex;
 
+
+//pub anchor_time_ms: u32,
+//pub song_id: u32,
+//pub count: u16,
+//pub avg_time_diff: f32,
+
+#[derive(Debug, Clone)]
+pub struct Peek {
+    pub freq: Complex<f32>,
+    pub time: f32,
+    pub magnitude: f32,  // Added for potential magnitude weighting
+}
+
+
+pub fn find_matches(
+    sample_fingerprint: &HashMap<u32, Couple>,
+    db_couples: &HashMap<u32, Vec<(Couple, PathBuf)>>,
+) -> Vec<Match> {
     let mut file_scores = HashMap::new();
 
-    for (address, couples_with_paths) in &db_couples {
+    // Tweak these values to adjust scoring
+    let max_time_diff_ms = 3000;  // 3 second window
+    let base_score = 10.0;        // Points per match
+
+    for (address, couples) in db_couples {
         if let Some(sample_couple) = sample_fingerprint.get(address) {
-            for (db_couple, audio_path) in couples_with_paths {
-                // Calculate time delta score
-                let time_diff =
-                    (sample_couple.anchor_time_ms as i32 - db_couple.anchor_time_ms as i32).abs();
+            for (db_couple, path) in couples {
+                let time_diff = (sample_couple.anchor_time_ms as i64 - db_couple.anchor_time_ms as i64).abs();
 
-                // Simple scoring: lower time difference = higher score
-                let score = 1.0 / (time_diff as f64 + 1.0);
+                // Simple exponential scoring
+                let score = base_score * (-0.0005 * time_diff as f64).exp();
 
-                file_scores
-                    .entry(audio_path)
-                    .and_modify(|s| *s += score)
-                    .or_insert(score);
+                let entry = file_scores.entry(path.clone())
+                    .or_insert((0.0, 0));
+                entry.0 += score;
+                entry.1 += 1;
             }
         }
     }
 
-    // Convert to sorted matches
-    let mut match_list: Vec<Match> = file_scores
+    // Convert to Match struct with combined scores
+    let mut matches: Vec<Match> = file_scores
         .into_iter()
-        .map(|(path, score)| Match {
-            file_path: path.clone(),
-            score,
-            timestamp: 0,
+        .map(|(path, (score, count))| {
+            // Boost scores with multiple matches
+            let final_score = score * (1.0 + (count as f64).ln());
+            Match {
+                file_path: path,
+                score: (final_score),
+                //match_count: count,
+                timestamp: count,
+            }
         })
         .collect();
 
-    match_list.sort_unstable_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+    // Sort descending by score
+    matches.sort_unstable_by(|a, b| b.score.total_cmp(&a.score));
 
-    Ok(match_list)
+
+    // Normalize to percentage-like values
+//    if let Some(max_score) = matches.iter().map(|m| m.score).max_by(|a, b| a.partial_cmp(b).unwrap()) {
+//        let scale = 100.0 / max_score;
+//        for m in &mut matches {
+//            m.score =m.score * scale;
+    //    }
+  //  }
+
+    matches
 }
-
-
 
 // Update the test to match new scoring
 #[test]
@@ -151,7 +186,7 @@ fn test_basic_matching() {
         (Couple { anchor_time_ms: 1005, song_id: 1 }, x.clone())
     ]);
 
-    let matches = find_matches(&sample_fp, db).unwrap();
+    let matches = find_matches(&sample_fp, &db);
     assert!(!matches.is_empty(), "Should find at least one match");
     assert_eq!(
         matches[0].file_path.file_name(),
@@ -177,7 +212,7 @@ fn test_temporal_matching() {
         (Couple { anchor_time_ms: 2005, song_id: 1 }, x.clone())
     ]);
 
-    let matches = find_matches(&sample_fp, db).unwrap();
+    let matches = find_matches(&sample_fp, &db);
     assert!(!matches.is_empty());
     // Base score (2 * 0.5 = 1.0) + temporal match (1.0) = 2.0
     assert_eq!(matches[0].score, 2.0);
@@ -188,5 +223,4 @@ mod tests {
     use std::path::PathBuf;
     use crate::models::Couple;
     use crate::r#match::find_matches;
-
 }
