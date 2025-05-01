@@ -51,8 +51,3 @@ pub fn save_fingerprint(fingerprint: &HashMap<u32, Couple>, path: &str) -> std::
     Ok(())
 }
 
-pub fn load_fingerprint(path: &str) -> std::io::Result<HashMap<u32, Couple>> {
-    let file = File::open(path)?;
-    let fingerprint = serde_json::from_reader(file)?;
-    Ok(fingerprint)
-}

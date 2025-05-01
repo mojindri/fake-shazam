@@ -26,8 +26,8 @@ async fn main() -> anyhow::Result<()> {
     let (mut samples, sample_rate) = load_mp3(&audio_path)?;
     let sample_rate = sample_rate.unwrap();
     // 2. Trim to first 5 seconds
-    let target_samples = sample_rate * 5;
-    samples.truncate(target_samples as usize);
+    //let target_samples = sample_rate * 5;
+    //samples.truncate(target_samples as usize);
 
     // 3. Generate fingerprint
     let spectrogram = spectogram(&samples, sample_rate)?;

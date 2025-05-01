@@ -9,8 +9,9 @@ pub fn generate_fingerprint(peaks: &[Peek], song_id: u32) -> HashMap<u32, Couple
     // tracing::info!("Generating fingerprint with {} peaks", peaks.len());
     for (i, anchor) in peaks.iter().enumerate() {
         let max_j = min(peaks.len(), i + TARGET_ZONE_SIZE + 1);
-        for j in (i + 1)..max_j {
-            let target = &peaks[j];
+        //for j in (i + 1)..max_j {
+            for j in peaks.iter().take(max_j).skip(i + 1) {
+            let target =  j;  //&peaks[j];
             let address = create_address(anchor, target);
             let anchor_time_ms = (anchor.time * 1000.0) as u32;
             fingerprints.insert(

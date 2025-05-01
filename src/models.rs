@@ -26,12 +26,6 @@ pub struct Match {
     pub score: f64,
     pub timestamp: u32,
 }
-#[derive(Clone, Copy)]
-pub struct Maxies {
-    pub(crate) max_msg: f64,
-    pub(crate) max_freq: Complex<f64>,
-    pub(crate) freq_ids: i16,
-}
 pub struct Band {
     pub(crate) min: usize,
     pub(crate) max: usize,

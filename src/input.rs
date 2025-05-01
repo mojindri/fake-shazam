@@ -1,11 +1,4 @@
-use crate::fft::fft;
-use crate::models::Couple;
 use anyhow::{Result, bail};
-use num_complex::ComplexFloat;
-use rustfft::num_complex::Complex;
-use std::cmp::min;
-use std::collections::HashMap;
-use std::f64::consts::PI;
 use std::fs::File;
 use std::path::PathBuf;
 use symphonia::core::audio::SampleBuffer;
@@ -67,13 +60,7 @@ pub fn load_mp3(path: &PathBuf) -> Result<(Vec<i16>, Option<u32>)> {
                     sample_buf = Some(SampleBuffer::<i16>::new(cap, spec));
                 }
                 let buf = sample_buf.as_mut().unwrap();
-                // Copy into our interleaved buffer
                 buf.copy_interleaved_ref(audio_buf);
-                //info!("Packet decoded: {} samples", buf.samples().len());
-                // Append to output
-                let preview: Vec<i16> = buf.samples().iter().take(10).cloned().collect();
-                //debug!("Sample preview: {:?}", preview);
-
                 out.extend_from_slice(buf.samples());
             }
             Err(e) => {
@@ -110,7 +97,6 @@ pub fn low_pass_filter_i16(samples: &[i16], sample_rate: f32, cutoff_hz: f32) ->
         })
         .collect()
 }
-type Spectrogram = Vec<Vec<Complex<f64>>>;
 
 pub fn down_sample_i16(samples: &[i16], original_rate: f32, target_rate: f32) -> Result<Vec<i16>> {
     if original_rate <= 0.0 || target_rate <= 0.0 {
