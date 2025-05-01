@@ -19,7 +19,7 @@ mod spectogram;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init(); // Initialize tracing
-    //train();
+    train();
     // 1. Load audio file
     let audio_path = PathBuf::from_str("./sample/sample.mp3").unwrap();
     let (mut samples, sample_rate) = load_mp3(&audio_path)?;
