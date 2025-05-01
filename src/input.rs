@@ -18,11 +18,6 @@ use symphonia::core::probe::Hint;
 use symphonia::default::{get_codecs, get_probe};
 use tracing::info;
 
-const DSP_RATIO: u32 = 4; // use u32 if sample_rate is u32
-const FREQ_BIN_SIZE: usize = 1024; // usize is handy for FFT buffer sizes
-const MAX_FREQ: f32 = 5_000.0; // make this f32 so no cast later
-const HOP_SIZE: usize = FREQ_BIN_SIZE / 32;
-
 pub fn load_mp3(path: &PathBuf) -> Result<(Vec<i16>, Option<u32>)> {
     // 1. Open the file and wrap it
     let file = File::open(path)?;
@@ -116,17 +111,6 @@ pub fn low_pass_filter_i16(samples: &[i16], sample_rate: f32, cutoff_hz: f32) ->
         .collect()
 }
 type Spectrogram = Vec<Vec<Complex<f64>>>;
-
-#[derive(Clone, Copy)]
-pub struct Maxies {
-    pub(crate) max_msg: f64,
-    pub(crate) max_freq: Complex<f64>,
-    pub(crate) freq_ids: i16,
-}
-pub struct Band {
-    pub(crate) min: i16,
-    pub(crate) max: i16,
-}
 
 pub fn down_sample_i16(samples: &[i16], original_rate: f32, target_rate: f32) -> Result<Vec<i16>> {
     if original_rate <= 0.0 || target_rate <= 0.0 {

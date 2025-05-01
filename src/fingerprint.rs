@@ -1,12 +1,12 @@
-use crate::models::Couple;
-use crate::spectogram::Peek;
+use crate::models::{Couple, Peek};
+
 use std::cmp::min;
 use std::collections::HashMap;
 
 const TARGET_ZONE_SIZE: usize = 5;
 pub fn generate_fingerprint(peaks: &[Peek], song_id: u32) -> HashMap<u32, Couple> {
     let mut fingerprints = HashMap::new();
-   // tracing::info!("Generating fingerprint with {} peaks", peaks.len());
+    // tracing::info!("Generating fingerprint with {} peaks", peaks.len());
     for (i, anchor) in peaks.iter().enumerate() {
         let max_j = min(peaks.len(), i + TARGET_ZONE_SIZE + 1);
         for j in (i + 1)..max_j {

@@ -1,42 +1,7 @@
-// spectogram.rs
-
 use crate::fft::fft;
-use crate::input::{Maxies, down_sample_i16, low_pass_filter_i16};
-use anyhow::Result;
-use num_complex::Complex;
+use crate::input::{down_sample_i16, low_pass_filter_i16};
+use crate::models::{BANDS, DSP_RATIO, FREQ_BIN_SIZE, HOP_SIZE, MAX_FREQ, Peek, Spectrogram};
 use std::f64::consts::PI;
-
-const DSP_RATIO: u32 = 4;
-const MAX_FREQ: f32 = 5_000.0;
-const FREQ_BIN_SIZE: usize = 1024;
-const HOP_SIZE: usize = FREQ_BIN_SIZE / 32;
-
-pub type Spectrogram = Vec<Vec<Complex<f64>>>;
-#[derive(Clone, Copy)]
-struct Band {
-    min: usize,
-    max: usize,
-}
-
-
-
-#[derive(Clone, Copy, Debug)]
-pub struct Peek {
-    pub time: f64,       // In seconds
-    pub freq_hz: f64,    // Actual frequency in Hz
-    pub magnitude: f64,  // Normalized magnitude
-}
-
-/// Logarithmic frequency bands that match human hearing better
-const BANDS: [Band; 7] = [
-    Band { min: 0,  max: 10 },   // 0-86 Hz (sub-bass)
-    Band { min: 10, max: 20 },   // 86-172 Hz (bass)
-    Band { min: 20, max: 40 },   // 172-344 Hz (low mids)
-    Band { min: 40, max: 80 },   // 344-688 Hz (mids)
-    Band { min: 80, max: 160 },  // 688-1375 Hz (upper mids)
-    Band { min: 160, max: 320 }, // 1375-2750 Hz (presence)
-    Band { min: 320, max: 512 }, // 2750-5000 Hz (brilliance)
-];
 
 pub fn extract_peaks(
     spectrogram: &Spectrogram,
@@ -66,18 +31,17 @@ pub fn extract_peaks(
         }
 
         // Calculate dynamic threshold (1.5× average of band maxima)
-        let avg_mag: f64 = band_maxima.iter()
-            .map(|(m, _)| m)
-            .sum::<f64>() / band_maxima.len().max(1) as f64;
+        let avg_mag: f64 =
+            band_maxima.iter().map(|(m, _)| m).sum::<f64>() / band_maxima.len().max(1) as f64;
         let threshold = avg_mag * 1.5;
 
         // Store peaks exceeding threshold
         for (mag, bin) in band_maxima {
             if mag >= threshold {
                 let freq_hz = (bin as f64 * freq_resolution).clamp(0.0, 5000.0);
-                let time = time_bin as f64 * time_resolution;  // Fixed here
+                let time = time_bin as f64 * time_resolution; // Fixed here
                 peaks.push(Peek {
-                    time,  // Use calculated time
+                    time, // Use calculated time
                     freq_hz,
                     magnitude: mag,
                 });
@@ -122,8 +86,6 @@ pub fn spectogram(wave_samples: &[i16], sample_rate: u32) -> anyhow::Result<Spec
         for j in 0..FREQ_BIN_SIZE {
             bin[j] *= window[j];
         }
-
-        // FFT und speichern
         spec[i] = fft(&bin);
     }
 

@@ -1,27 +1,6 @@
-
-use serde::{Deserialize, Serialize};
-
-use std::path::PathBuf;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Match {
-    pub file_path: PathBuf,
-    pub score: f64,
-    pub timestamp: u32,
-}
-
-use num_complex::Complex;
-
-
-#[derive(Debug, Clone)]
-pub struct Peek {
-    pub freq: Complex<f32>,
-    pub time: f32,
-    pub magnitude: f32,  // Added for potential magnitude weighting
-}
+use crate::models::{Couple, Match};
 use std::collections::HashMap;
-use crate::models::Couple;
-
+use std::path::PathBuf;
 
 pub fn find_matches(
     sample_fingerprint: &HashMap<u32, Couple>,
@@ -38,7 +17,9 @@ pub fn find_matches(
                     .entry(path.clone())
                     .or_insert((Vec::new(), u32::MAX));
 
-                entry.0.push((sample_couple.anchor_time_ms, db_couple.anchor_time_ms));
+                entry
+                    .0
+                    .push((sample_couple.anchor_time_ms, db_couple.anchor_time_ms));
 
                 // Track earliest timestamp
                 if db_couple.anchor_time_ms < entry.1 {
