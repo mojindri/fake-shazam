@@ -19,7 +19,8 @@ mod spectogram;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init(); // Initialize tracing
-    train();
+    //train();
+   // return Ok(());
     // 1. Load audio file
     let audio_path = PathBuf::from_str("./sample/sample.mp3").unwrap();
     let (mut samples, sample_rate) = load_mp3(&audio_path)?;
@@ -30,7 +31,9 @@ async fn main() -> anyhow::Result<()> {
 
     // 3. Generate fingerprint
     let spectrogram = spectogram(&samples, sample_rate)?;
-    let peaks = extract_peaks(&spectrogram, 5.0); // 5-second duration
+    let duration_secs = samples.len() as f64 / sample_rate as f64;
+
+    let peaks = extract_peaks(&spectrogram, duration_secs ,sample_rate); // 5-second duration
     let fingerprint = generate_fingerprint(&peaks, 0); // Use 0 for sample ID
     let addresses: Vec<u32> = fingerprint.keys().copied().collect();
      let db_couples = get_db_couples(&addresses)?;
@@ -49,10 +52,11 @@ async fn main() -> anyhow::Result<()> {
 fn train() {
     let mp3s = load_mp3_dir();
     for mp3 in mp3s {
+        tracing::info!("{} loaded.", mp3.to_string_lossy());
         let (wave, sample_rate) = load_mp3(&mp3).unwrap();
         let sample_rate = sample_rate.unwrap();
         let spect = spectogram(&wave, sample_rate).unwrap();
-        let peaks = extract_peaks(&spect, (wave.len() as u32 / sample_rate) as f64);
+        let peaks = extract_peaks(&spect, (wave.len() as u32 / sample_rate) as f64,sample_rate);
         tracing::info!("peaks {} founded.", peaks.len());
         let hash_ids = generate_fingerprint(&peaks, generate_unique_id());
         tracing::info!("hash ids {} generated.", hash_ids.len());
@@ -68,6 +72,7 @@ fn load_mp3_dir() -> Vec<PathBuf> {
     let mut fs = std::fs::read_dir("./mp3").unwrap();
     while let Some(Ok(item)) = &fs.next() {
         let path = item.path();
+
         //tracing::info!("Reading {:?}", path);
         list.push(path);
     }
